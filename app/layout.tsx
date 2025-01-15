@@ -9,8 +9,8 @@ interface RootLayoutProps {
 }
 
 export const metadata = {
-  title: 'Your App Name',
-  description: 'Your app description',
+  title: 'German Vocabulary Flashcards',
+  description: 'Learn German easy and fast!',
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {

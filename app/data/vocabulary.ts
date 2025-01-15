@@ -38,7 +38,7 @@ export const FlashCardSchema = z.object({
 export type FlashCard = z.infer<typeof FlashCardSchema>;
 
 // Fetch data from PostgreSQL
-export const getVocabulary = async (): Promise<FlashCard[]> => {
+export const getVocabulary = async (level: string, limit: number = 30, offset: number = 0): Promise<FlashCard[]> => {
   const queryText = `
     SELECT 
       id::text, 
@@ -49,10 +49,12 @@ export const getVocabulary = async (): Promise<FlashCard[]> => {
       set_number::text AS set, 
       level
     FROM public.german_words
-    ORDER BY id;
+    WHERE level = $1
+    ORDER BY id
+    LIMIT $2 OFFSET $3;
   `;
 
-  const rows = await query(queryText);
+  const rows = await query(queryText, [level, limit,offset]);
 
   // Validate the data using the schema
   return rows.map((row) => FlashCardSchema.parse({

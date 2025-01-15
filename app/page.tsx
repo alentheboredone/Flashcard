@@ -10,26 +10,21 @@ import { getVocabulary } from './data/vocabulary'; // Import the new dynamic fun
 import { FlashCardWithStateSchema, type FlashCardWithState } from './lib/types'
 
 
-// Debugging imports
-//console.log('FlashCardComponent:', FlashCardComponent);
-//console.log('ProgressTracker:', ProgressTracker);
-//console.log('LevelSelector:', LevelSelector);
-//console.log('ActionButtons:', ActionButtons);
-//console.log('initialVocabulary:', initialVocabulary);
-//console.log('FlashCardWithStateSchema:', FlashCardWithStateSchema);
-
 function shuffleArray<T>(array: T[]): T[] {
   return [...array].sort(() => Math.random() - 0.5);
 }
 
 export default function Page(): JSX.Element {
+  //const [level, setLevel] = useState("B1.1 (31-60)"); // Default level
+  const [level, setLevel] = useState("B1.1 (1-30)"); // Use `level` as the single source of truth
+  const [limit, setLimit] = useState(30); // Default limit
+  const [offset, setOffset] = useState(0); // Default offset
   const [flashcards, setFlashcards] = useState<FlashCardWithState[]>([]);
   const [loading, setLoading] = useState(true); // Loading state for fetching data
-  const [currentLevel, setCurrentLevel] = useState<string>('');
+  //const [currentLevel, setCurrentLevel] = useState<string>('');
   //const [currentSet, setCurrentSet] = useState<string>(''); // Track selected card set
   const [currentCardIndex, setCurrentCardIndex] = useState<number>(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  // Add state to track last shown card index
   const [lastShownIndex, setLastShownIndex] = useState<number>(-1);
   
   useEffect(() => {
@@ -37,7 +32,9 @@ export default function Page(): JSX.Element {
     const fetchVocabulary = async () => {
       try {
         setLoading(true); // Set loading to true before fetching
-        const fetchedVocabulary = await getVocabulary();
+        console.log("Fetching level:", level); // Debugging
+        const fetchedVocabulary = await getVocabulary(level, limit, offset);
+        console.log("Fetched data:", fetchedVocabulary); // Debugging
         const flashcardsWithState = fetchedVocabulary.map(word => ({
           ...word,
           reviewCount: 0,
@@ -53,14 +50,13 @@ export default function Page(): JSX.Element {
     };
 
     fetchVocabulary();
-  }, []);
+  }, [level]);
 
   if (loading) {
     return <div className="min-h-screen bg-purple-900 text-white p-4">Loading...</div>;
   }
   // First, get all cards for the current level
-  const cardsInLevel = flashcards.filter(card => card.level === currentLevel);
-
+  const cardsInLevel = flashcards;
   // Then, get non-mastered cards
   const nonMasteredCards = cardsInLevel.filter(card => card.category !== 'mastered');
 
@@ -156,16 +152,13 @@ export default function Page(): JSX.Element {
     setIsFlipped(false);
   }
 
-  // Rest of your component remains the same, just ensure you're using
-  // the correct type names (FlashCard/FlashCardWithState) and category values
-  // ('mastered' | 'learning' | 'reviewing' instead of 'Mastered' | 'Learning' | 'Reviewing')
 
   return (
     <div className="min-h-screen bg-purple-900 text-white p-4">
       <div className="max-w-md mx-auto">
         <h1 className="text-2xl font-bold mb-4">German Vocabulary Flashcards</h1>
 
-        <LevelSelector onLevelChange={setCurrentLevel}/>
+        <LevelSelector onLevelChange={(selectedLevel) => setLevel(selectedLevel)} />
 
         <FlashCardComponent
           card={currentCard}
