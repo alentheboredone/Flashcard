@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "./ui/card";
 import { cn } from "./lib/utils";
+import { speakText } from "@/app/lib/speechUtils"; // Import your utility function
 
 interface FlashcardProps {
   card: {
@@ -59,6 +60,16 @@ export function FlashCard({ card, isFlipped, currentCardIndex, onFlip }: Flashca
                 {isFlipped && (
                   <p className="text-muted-foreground text-center">{card.example}</p>
                 )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();  // Prevents flipping the card when clicking the button
+                    speakText(card.german);
+                  }}
+                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-700 transition"
+                >
+                  🔊 Pronounce
+                </button>
+                
               </>
             ) : (
               <p className="text-xl text-center">No cards available for this level</p>
