@@ -156,7 +156,7 @@ export default function Page(): JSX.Element {
   return (
     <div className="min-h-screen bg-purple-900 text-white p-4">
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-4">German Vocabulary Flashcards</h1>
+
 
         <LevelSelector selectedLevel={level} onLevelChange={(selectedLevel) => setLevel(selectedLevel as LanguageLevel)} />
 
