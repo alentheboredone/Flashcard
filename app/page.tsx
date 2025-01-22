@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { FlashCard as FlashCardComponent } from './components/FlashCard'
 import { ProgressTracker } from './components/ProgressTracker'
 import { ProgressBar } from './components/ProgressBar'
-import { LevelSelector } from './components/LevelSelector'
+import { LevelSelector, LanguageLevel } from './components/LevelSelector'
 import { ActionButtons } from './components/ActionButtons'
 import { getVocabulary } from './data/vocabulary'; // Import the new dynamic function
 import { FlashCardWithStateSchema, type FlashCardWithState } from './lib/types'
@@ -16,7 +16,7 @@ function shuffleArray<T>(array: T[]): T[] {
 
 export default function Page(): JSX.Element {
   //const [level, setLevel] = useState("B1.1 (31-60)"); // Default level
-  const [level, setLevel] = useState("B1.1 (1-30)"); // Use `level` as the single source of truth
+  const [level, setLevel] = useState<LanguageLevel>("B1.1 (1-30)"); // Use `level` as the single source of truth
   const [limit, setLimit] = useState(30); // Default limit
   const [offset, setOffset] = useState(0); // Default offset
   const [flashcards, setFlashcards] = useState<FlashCardWithState[]>([]);
@@ -158,7 +158,7 @@ export default function Page(): JSX.Element {
       <div className="max-w-md mx-auto">
         <h1 className="text-2xl font-bold mb-4">German Vocabulary Flashcards</h1>
 
-        <LevelSelector onLevelChange={(selectedLevel) => setLevel(selectedLevel)} />
+        <LevelSelector selectedLevel={level} onLevelChange={(selectedLevel) => setLevel(selectedLevel as LanguageLevel)} />
 
         <FlashCardComponent
           card={currentCard}

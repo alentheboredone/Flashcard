@@ -25,16 +25,18 @@ const CARD_SETS = [
   "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
   "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"
 ] as const;
-type LanguageLevel = typeof LANGUAGE_LEVELS[number];
+export type LanguageLevel = typeof LANGUAGE_LEVELS[number];
 //type CardSet = typeof CARD_SETS[number];
 interface LevelSelectorProps {
+  selectedLevel: LanguageLevel;
   onLevelChange: (value: LanguageLevel) => void;
 }
 
-export function LevelSelector({ onLevelChange }: LevelSelectorProps) {
+
+export function LevelSelector({ selectedLevel, onLevelChange }: LevelSelectorProps) {
   return (
     <div className="mb-4">
-      <Select onValueChange={onLevelChange}>
+      <Select value = {selectedLevel} onValueChange={onLevelChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select Level" />
         </SelectTrigger>
