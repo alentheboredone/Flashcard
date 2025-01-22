@@ -1,12 +1,30 @@
-export const speakText = (text: string) => {
+export function speakText(text: string) {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'de-DE'; // German language
-      utterance.rate = 1; // Speed of speech (1 is normal)
-      utterance.pitch = 1; // Pitch (1 is normal)
-      speechSynthesis.speak(utterance);
+  
+      // Ensure voices are loaded properly
+      window.speechSynthesis.onvoiceschanged = () => {
+        const voices = window.speechSynthesis.getVoices();
+        
+        // Try to find a German voice
+        const germanVoice = voices.find(voice => voice.lang.includes('de'));
+  
+        if (germanVoice) {
+          utterance.voice = germanVoice; // Use the German voice
+        } else {
+          utterance.lang = 'de-DE'; // Fallback to German language
+        }
+  
+        utterance.rate = 0.9;  // Adjust speed if necessary
+        utterance.pitch = 1.0; // Adjust pitch if necessary
+  
+        window.speechSynthesis.speak(utterance);
+      };
+  
+      // Trigger voice loading if not yet available
+      window.speechSynthesis.getVoices();
     } else {
-      alert("Sorry, your browser doesn't support text-to-speech!");
+      console.error('Speech synthesis is not supported in this browser.');
     }
-  };
+  }
   
