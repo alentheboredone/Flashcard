@@ -7,15 +7,15 @@ dotenv.config();
 
 
 // Create a connection pool for PostgreSQL
-const pool = new Pool({
-user: 'postgres', // Replace with your PostgreSQL username
-host: 'localhost',     // Replace with your PostgreSQL host
-database: 'German words', // Replace with your PostgreSQL database name
-password: 'Postgres@94341', // Replace with your PostgreSQL password
-port: 5432,            // Replace with your PostgreSQL port if different
+//const pool = new Pool({
+//user: 'postgres', // Replace with your PostgreSQL username
+//host: 'localhost',     // Replace with your PostgreSQL host
+//database: 'German words', // Replace with your PostgreSQL database name
+//password: 'Postgres@94341', // Replace with your PostgreSQL password
+/*port: 5432,            // Replace with your PostgreSQL port if different
 });
 console.log('Database User:',  process.env.DATABASE_USER);
-console.log('Database Password:', process.env.DATABASE_PASSWORD); // Debug only, remove after testing
+console.log('Database Password:', process.env.DATABASE_PASSWORD); // Debug only, remove after testing*/
 
 // Configure the database connection dynamically based on environment variables
 const pool = new Pool({
