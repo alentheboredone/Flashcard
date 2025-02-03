@@ -18,17 +18,17 @@ console.log('Database User:',  process.env.DATABASE_USER);
 console.log('Database Password:', process.env.DATABASE_PASSWORD); // Debug only, remove after testing
 
 // Configure the database connection dynamically based on environment variables
-//const pool = new Pool({
-//  host: process.env.DATABASE_HOST, // From environment variable
-//  port: parseInt(process.env.DATABASE_PORT || '5432'), // Default port is 5432
-//  user: process.env.DATABASE_USER, // From environment variable
-//  password: process.env.DATABASE_PASSWORD, // From environment variable
-//  database: process.env.DATABASE_NAME || 'postgres', // Default to 'postgres' if not set
-//  connectionString: process.env.DATABASE_URL,
-//  ssl: {
-//    rejectUnauthorized: false, // Needed for Supabase SSL connections
-//  },
-//});
+const pool = new Pool({
+  host: process.env.DATABASE_HOST, // From environment variable
+  port: parseInt(process.env.DATABASE_PORT || '5432'), // Default port is 5432
+  user: process.env.DATABASE_USER, // From environment variable
+  password: process.env.DATABASE_PASSWORD, // From environment variable
+  database: process.env.DATABASE_NAME || 'postgres', // Default to 'postgres' if not set
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false, // Needed for Supabase SSL connections
+  },
+});
 
 console.log('Connecting to:', process.env.DATABASE_URL);
 
