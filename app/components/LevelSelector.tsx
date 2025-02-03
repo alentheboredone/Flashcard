@@ -1,47 +1,81 @@
-import React from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+//app/components/LevelSelector.tsx
+import React, { useState, useEffect } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
-const LANGUAGE_LEVELS = ["A1.1", "A1.2", "B1.1 (1-30)",
-  "B1.1 (31-60)",
-  "B1.1 (61-90)",
-  "B1.1 (91-120)",
-  "B1.1 (121-150)",
-  "B1.1 (151-180)",
-  "B1.1 (181-210)",
-  "B1.1 (211-240)",
-  "B1.1 (241-270)",
-  "B1.1 (271-300)",
-  "B1.1 (301-330)",
-  "B1.1 (331-360)",
-  "B1.1 (361-390)",
-  "B1.1 (391-420)",
-  "B1.1 (421-450)",
-  "B1.1 (451-480)",
-  "B1.1 (481-510)",
-  "B1.1 (511-540)",
-  "B1.1 (541-570)",
-  "B1.1 (571-579)"] as const;
-const CARD_SETS = [
-  "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
-  "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21"
-] as const;
-export type LanguageLevel = typeof LANGUAGE_LEVELS[number];
-//type CardSet = typeof CARD_SETS[number];
+
+
+export type LanguageLevel = string;
+
 interface LevelSelectorProps {
   selectedLevel: LanguageLevel;
   onLevelChange: (value: LanguageLevel) => void;
+  /** 
+   * Optional: when provided, the dropdown will show only levels that begin with this base level.
+   * For example, if baseLevel is "B1.1", only options starting with "B1.1" will be shown.
+   */
+  baseLevel?: string;
 }
 
+export function LevelSelector({
+  selectedLevel,
+  onLevelChange,
+  baseLevel,
+}: LevelSelectorProps) {
+  const [options, setOptions] = useState<LanguageLevel[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-export function LevelSelector({ selectedLevel, onLevelChange }: LevelSelectorProps) {
+  useEffect(() => {
+    async function fetchLevels() {
+      setLoading(true);
+      try {
+        // Build the URL; if baseLevel is provided, add it as a query parameter.
+        let url = '/api/levels';
+        if (baseLevel) {
+          url += `?baseLevel=${encodeURIComponent(baseLevel)}`;
+        }
+        const response = await fetch(url);
+        const data = await response.json();
+        let fetchedLevels: LanguageLevel[] = data.levels;
+
+        // Sort the levels in ascending order by the numeric start of the range.
+        fetchedLevels.sort((a, b) => {
+          // Use a regular expression to extract the starting number from the level string.
+          // Example: for "B1.1 (1-30)" this extracts "1".
+          const matchA = a.match(/\((\d+)-/);
+          const matchB = b.match(/\((\d+)-/);
+          const numA = matchA ? parseInt(matchA[1], 10) : 0;
+          const numB = matchB ? parseInt(matchB[1], 10) : 0;
+          return numA - numB;
+        });
+        
+        setOptions(fetchedLevels);
+      } catch (error) {
+        console.error('Error fetching levels:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchLevels();
+  }, [baseLevel]);
+
+  if (loading) {
+    return <div>Loading levels...</div>;
+  }
+
   return (
     <div className="mb-4">
-      <Select value = {selectedLevel} onValueChange={onLevelChange}>
+      <Select value={selectedLevel} onValueChange={onLevelChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select Level" />
         </SelectTrigger>
         <SelectContent>
-          {LANGUAGE_LEVELS.map((level) => (
+          {options.map((level) => (
             <SelectItem key={level} value={level}>
               {level}
             </SelectItem>

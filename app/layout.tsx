@@ -10,7 +10,7 @@ interface RootLayoutProps {
 
 export const metadata = {
   title: 'German Vocabulary Flashcards',
-  description: 'Learn German words easy and fast!!',
+  description: 'Learn German easy and fast!',
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {

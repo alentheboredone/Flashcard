@@ -1,189 +1,133 @@
-'use client'
+// app/page.tsx
+'use client';
 
-import { useState, useEffect } from 'react'
-import { FlashCard as FlashCardComponent } from './components/FlashCard'
-import { ProgressTracker } from './components/ProgressTracker'
-import { ProgressBar } from './components/ProgressBar'
-import { LevelSelector, LanguageLevel } from './components/LevelSelector'
-import { ActionButtons } from './components/ActionButtons'
-import { getVocabulary } from './data/vocabulary'; // Import the new dynamic function
-import { FlashCardWithStateSchema, type FlashCardWithState } from './lib/types'
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { 
+  GraduationCap, 
+  Speech, 
+  MessageCircle, 
+  Clock, 
+  Users, 
+  BookOpen,
+  Presentation 
+} from 'lucide-react';
 
+const levels = [
+  { 
+    id: 'A1.1', 
+    title: 'Beginner I', 
+    description: 'Basic greetings and introductions',
+    icon: Speech
+  },
+  { 
+    id: 'A1.2', 
+    title: 'Beginner II', 
+    description: 'Simple conversations and daily routines',
+    icon: MessageCircle
+  },
+  { 
+    id: 'A2.1', 
+    title: 'Elementary I', 
+    description: 'Past experiences and future plans',
+    icon: Clock
+  },
+  { 
+    id: 'A2.2', 
+    title: 'Elementary II', 
+    description: 'Describing people and places',
+    icon: Users
+  },
+  { 
+    id: 'B1.1', 
+    title: 'Intermediate I', 
+    description: 'Complex opinions and discussions',
+    icon: BookOpen
+  },
+  { 
+    id: 'B1.2', 
+    title: 'Intermediate II', 
+    description: 'Abstract topics and media',
+    icon: Presentation
+  },
+];
 
-function shuffleArray<T>(array: T[]): T[] {
-  return [...array].sort(() => Math.random() - 0.5);
-}
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
 
-export default function Page(): JSX.Element {
-  //const [level, setLevel] = useState("B1.1 (31-60)"); // Default level
-  const [level, setLevel] = useState<LanguageLevel>("B1.1 (1-30)"); // Use `level` as the single source of truth
-  const [limit, setLimit] = useState(30); // Default limit
-  const [offset, setOffset] = useState(0); // Default offset
-  const [flashcards, setFlashcards] = useState<FlashCardWithState[]>([]);
-  const [loading, setLoading] = useState(true); // Loading state for fetching data
-  //const [currentLevel, setCurrentLevel] = useState<string>('');
-  //const [currentSet, setCurrentSet] = useState<string>(''); // Track selected card set
-  const [currentCardIndex, setCurrentCardIndex] = useState<number>(0);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [lastShownIndex, setLastShownIndex] = useState<number>(-1);
-  
-  useEffect(() => {
-    // Fetch data from the database
-    const fetchVocabulary = async () => {
-      try {
-        setLoading(true); // Set loading to true before fetching
-        console.log("Fetching level:", level); // Debugging
-        const fetchedVocabulary = await getVocabulary(level, limit, offset);
-        console.log("Fetched data:", fetchedVocabulary); // Debugging
-        const flashcardsWithState = fetchedVocabulary.map(word => ({
-          ...word,
-          reviewCount: 0,
-          isNew: true,
-          lastShown: -1,
-        }));
-        setFlashcards(flashcardsWithState);
-      } catch (error) {
-        console.error('Error fetching vocabulary:', error);
-      } finally {
-        setLoading(false); // Set loading to false after fetching
-      }
-    };
+const item = {
+  hidden: { y: 20, opacity: 0 },
+  show: { y: 0, opacity: 1 },
+};
 
-    fetchVocabulary();
-  }, [level]);
-
-  if (loading) {
-    return <div className="min-h-screen bg-purple-900 text-white p-4">Loading...</div>;
-  }
-  // First, get all cards for the current level
-  const cardsInLevel = flashcards;
-  // Then, get non-mastered cards
-  const nonMasteredCards = cardsInLevel.filter(card => card.category !== 'mastered');
-
-  // Choose which array to use based on whether there are non-mastered cards
-  const filteredCards = nonMasteredCards.length > 0 ? nonMasteredCards : cardsInLevel;
-
-  // Get current card without shuffling on every render
-  const currentCard = cardsInLevel.length > 0 
-    ? filteredCards[currentCardIndex % filteredCards.length]
-    : null;
-
-  console.log('Current Index:', currentCardIndex);
-  const categoryCounts = {
-    New: cardsInLevel.filter(card => card.isNew).length,
-    Learning: cardsInLevel.filter(card => !card.isNew && card.reviewCount < 3).length,
-    Reviewing: cardsInLevel.filter(card => !card.isNew && card.reviewCount >= 3 && card.reviewCount < 7).length,
-    Mastered: cardsInLevel.filter(card => !card.isNew && card.reviewCount >= 7).length,
-  };
-  
-  const totalCards = cardsInLevel.length; // Change this line
-  
-  //console.log('CategoryCounts:', categoryCounts);
-  //console.log('TotalCards:', totalCards);
-  function updateCardCategory(wasCorrect: boolean) {
-    setFlashcards(cards =>
-      cards.map((card) => {
-        if (card.id !== currentCard?.id) return card;
-  
-        let newReviewCount = card.reviewCount;
-        let isNew = card.isNew;
-  
-        if (!wasCorrect && card.category === 'mastered') {
-          newReviewCount = 3;  // Reset to beginning of reviewing
-          isNew = false;
-        } else if (card.isNew) {
-          // New Word → Mastered or Learning
-          if (wasCorrect) {
-            newReviewCount = 7; // Directly moves to Mastered
-            isNew = false;
-          } else {
-            newReviewCount = 1; // Moves to Learning
-            isNew = false;
-          }
-        } else if (newReviewCount < 3) {
-          // Learning → Reviewing
-          if (wasCorrect) {
-            newReviewCount += 1;
-          } else {
-            newReviewCount = Math.max(0, newReviewCount - 1); // Reset to Learning if failed
-          }
-        } else if (newReviewCount >= 3 && newReviewCount < 7) {
-          // Reviewing → Mastered
-          if (wasCorrect) {
-            newReviewCount += 1;
-          } else {
-            newReviewCount = 3; // Reset to the beginning of Reviewing
-          }
-        }
-  
-        // Determine the new category
-        let newCategory: 'mastered' | 'learning' | 'reviewing' = 'mastered';
-        if (isNew) {
-          newCategory = 'learning';
-        } else if (newReviewCount < 3) {
-          newCategory = 'learning';
-        } else if (newReviewCount >= 3 && newReviewCount < 7) {
-          newCategory = 'reviewing';
-        }
-  
-        return {
-          ...card,
-          reviewCount: newReviewCount,
-          isNew: isNew,
-          category: newCategory,
-          lastShown: Date.now(),
-        };
-      })
-    );
-  
-    setCurrentCardIndex((prevIndex) => {
-      let shuffledIndex;
-      do {
-        shuffledIndex = Math.floor(Math.random() * filteredCards.length);
-      } while (
-        shuffledIndex === lastShownIndex && 
-        filteredCards.length > 1
-      );
-      
-      setLastShownIndex(shuffledIndex);
-      return shuffledIndex;
-    });
-  
-    setIsFlipped(false);
-  }
-
+export default function LandingPage() {
+  const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-purple-900 text-white p-4">
-      <div className="max-w-md mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 text-white">
+      <div className="max-w-6xl mx-auto px-4 py-16">
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <GraduationCap size={48} className="text-white" />
+            <h1 className="text-5xl font-bold text-white">DeutschCards</h1>
+          </div>
+          <p className="text-xl text-white max-w-2xl mx-auto">
+            Master German vocabulary through interactive flashcards. Choose your level and start learning today.
+          </p>
+        </motion.div>
 
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          {levels.map((level) => {
+            const Icon = level.icon;
+            return (
+              <motion.div
+                key={level.id}
+                variants={item}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="bg-white/10 backdrop-blur-lg rounded-xl p-6 cursor-pointer hover:bg-white/15 transition-colors"
+                onClick={() => router.push(`/flashcards/${level.id}`)}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <Icon size={24} className="text-white" />
+                  <span className="text-2xl font-bold text-white">{level.id}</span>
+                  <div className="h-6 w-px bg-white/50" />
+                  <span className="text-lg font-medium text-white">{level.title}</span>
+                </div>
+                <p className="text-white/90">{level.description}</p>
+              </motion.div>
+            );
+          })}
+        </motion.div>
 
-        <LevelSelector selectedLevel={level} onLevelChange={(selectedLevel) => setLevel(selectedLevel as LanguageLevel)} />
-
-        <FlashCardComponent
-          card={currentCard}
-          isFlipped={isFlipped}
-          currentCardIndex={currentCardIndex}
-          onFlip={() => setIsFlipped(!isFlipped)}
-        />
-
-        <ActionButtons
-          onKnew={() => updateCardCategory(true)}
-          onDidNotKnow={() => updateCardCategory(false)}
-          disabled={!currentCard}
-        />
-
-        <ProgressBar
-          mastered={categoryCounts.Mastered}
-          learning={categoryCounts.Learning}
-          reviewing={categoryCounts.Reviewing}
-          total={totalCards}
-        />
-
-        <ProgressTracker
-          categoryCounts={categoryCounts}
-          totalCards={totalCards}
-        />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="mt-16 text-center"
+        >
+          <p className="text-white">
+            Start your journey to German fluency with our carefully curated flashcard sets.
+          </p>
+        </motion.div>
       </div>
     </div>
   );
