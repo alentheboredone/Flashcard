@@ -90,26 +90,76 @@ export default function FlashcardPage() {
 
   const totalCards = cardsInLevel.length;
 
+  function weightedRandomSelect(cards: FlashCardWithState[], weightFn: (card: FlashCardWithState) => number): FlashCardWithState | null {
+    // Compute weights for each candidate card.
+    const weights = cards.map(weightFn);
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    if (totalWeight === 0) return null;
+  
+    let random = Math.random() * totalWeight;
+    for (let i = 0; i < cards.length; i++) {
+      random -= weights[i];
+      if (random <= 0) {
+        return cards[i];
+      }
+    }
+    return cards[cards.length - 1]; // Fallback in case of rounding errors.
+  }
+
+  function getNextCard(cards: FlashCardWithState[], lastShownId: string | null): FlashCardWithState | null {
+    // Exclude the card that was just shown.
+    const candidates = cards.filter(card => card.id !== lastShownId);
+    if (candidates.length === 0) return null;
+  
+    // Define a weight function:
+    // - For new cards, assign a fixed weight (e.g., 1).
+    // - For reviewed cards, assign a weight = 1 / interval (so lower interval means higher chance).
+    const weightFn = (card: FlashCardWithState) => {
+      if (card.isNew) {
+        return 1; // Fixed weight for new cards.
+      } else {
+        return 1 / card.interval; // Lower interval yields higher weight.
+      }
+    };
+  
+    return weightedRandomSelect(candidates, weightFn);
+  }
+
+  function updateCardCategory(wasCorrect: boolean) {
+    // Update the current card using your spaced repetition logic.
+    setFlashcards(prevCards => {
+      const updatedCards = prevCards.map(card => {
+        if (card.id !== currentCard?.id) return card;
+        return updateCardAfterReview(card, wasCorrect);
+      });
+  
+      // Choose the next card using the new weighted random selection.
+      const nextCard = getNextCard(updatedCards, currentCard?.id || null);
+      if (nextCard) {
+        setCurrentCardIndex(updatedCards.findIndex(card => card.id === nextCard.id));
+      }
+      setIsFlipped(false);
+      return updatedCards;
+    });
+  }
+
   function updateCardAfterReview(card: FlashCardWithState, wasCorrect: boolean): FlashCardWithState {
-    // We want cards the user did not know to appear more often.
-    // If the user did not know the card, reset the interval to 1.
-    // If the user knew it, increase the interval (for example, multiply by 2).
     if (!wasCorrect) {
+      // If the user did not know it, reset interval to 1.
       return {
         ...card,
-        interval: 1,       // reset interval so that the card comes up soon
-        isNew: false,      // mark as reviewed
-        category: 'learning', // you might consider it still "learning"
+        interval: 1,
+        isNew: false,
+        category: 'learning',
         lastShown: Date.now(),
       };
     } else {
-      // If correct, increase the interval
+      // If correct, update the interval.
       const newInterval = card.isNew ? 2 : card.interval * 2;
-      // Optionally, update category based on the new interval:
       let newCategory: 'learning' | 'reviewing' | 'mastered';
-      if (newInterval < 4) {
+      if (newInterval < 3) {
         newCategory = 'learning';
-      } else if (newInterval < 8) {
+      } else if (newInterval < 7) {
         newCategory = 'reviewing';
       } else {
         newCategory = 'mastered';
@@ -123,38 +173,7 @@ export default function FlashcardPage() {
       };
     }
   }
-  function getNextCard(cards: FlashCardWithState[], lastShownId: string | null): FlashCardWithState | null {
-    // First, filter out the card that was just shown (if possible)
-    const candidates = cards.filter(card => card.id !== lastShownId);
-    
-    // Prefer new cards if any exist
-    const newCards = candidates.filter(card => card.isNew);
-    if (newCards.length > 0) {
-      // Return a random new card
-      return newCards[Math.floor(Math.random() * newCards.length)];
-    }
-    
-    // Otherwise, sort by interval (lowest first)
-    candidates.sort((a, b) => a.interval - b.interval);
-    return candidates.length > 0 ? candidates[0] : null;
-  }
-
-  function updateCardCategory(wasCorrect: boolean) {
-    setFlashcards((prevCards) => {
-      const updatedCards = prevCards.map((card) => {
-        if (card.id !== currentCard?.id) return card;
-        return updateCardAfterReview(card, wasCorrect);
-      });
-      
-      const nextCard = getNextCard(updatedCards, currentCard?.id || null);
-      if (nextCard) {
-        setCurrentCardIndex(updatedCards.findIndex(card => card.id === nextCard.id));
-      }
-      
-      setIsFlipped(false);
-      return updatedCards;
-    });
-  }
+  
   
 
   /*function updateCardCategory(wasCorrect: boolean) {
