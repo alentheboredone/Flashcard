@@ -41,6 +41,7 @@ export default function FlashcardPage() {
         const flashcardsWithState = fetchedVocabulary.map((word) => ({
           ...word,
           reviewCount: 0,
+          interval: 1,
           isNew: true,
           lastShown: -1,
         }));
@@ -72,16 +73,91 @@ export default function FlashcardPage() {
     ? filteredCards[currentCardIndex % filteredCards.length]
     : null;
 
-  const categoryCounts = {
+  /*const categoryCounts = {
     New: cardsInLevel.filter(card => card.isNew).length,
     Learning: cardsInLevel.filter(card => !card.isNew && card.reviewCount < 3).length,
     Reviewing: cardsInLevel.filter(card => !card.isNew && card.reviewCount >= 3 && card.reviewCount < 7).length,
     Mastered: cardsInLevel.filter(card => !card.isNew && card.reviewCount >= 7).length,
+  };*/
+
+  const categoryCounts = {
+    New: cardsInLevel.filter(card => card.isNew).length,
+    Learning: cardsInLevel.filter(card => !card.isNew && card.category === 'learning').length,
+    Reviewing: cardsInLevel.filter(card => !card.isNew && card.category === 'reviewing').length,
+    Mastered: cardsInLevel.filter(card => !card.isNew && card.category === 'mastered').length,
   };
+  
 
   const totalCards = cardsInLevel.length;
 
+  function updateCardAfterReview(card: FlashCardWithState, wasCorrect: boolean): FlashCardWithState {
+    // We want cards the user did not know to appear more often.
+    // If the user did not know the card, reset the interval to 1.
+    // If the user knew it, increase the interval (for example, multiply by 2).
+    if (!wasCorrect) {
+      return {
+        ...card,
+        interval: 1,       // reset interval so that the card comes up soon
+        isNew: false,      // mark as reviewed
+        category: 'learning', // you might consider it still "learning"
+        lastShown: Date.now(),
+      };
+    } else {
+      // If correct, increase the interval
+      const newInterval = card.isNew ? 2 : card.interval * 2;
+      // Optionally, update category based on the new interval:
+      let newCategory: 'learning' | 'reviewing' | 'mastered';
+      if (newInterval < 4) {
+        newCategory = 'learning';
+      } else if (newInterval < 8) {
+        newCategory = 'reviewing';
+      } else {
+        newCategory = 'mastered';
+      }
+      return {
+        ...card,
+        interval: newInterval,
+        isNew: false,
+        category: newCategory,
+        lastShown: Date.now(),
+      };
+    }
+  }
+  function getNextCard(cards: FlashCardWithState[], lastShownId: string | null): FlashCardWithState | null {
+    // First, filter out the card that was just shown (if possible)
+    const candidates = cards.filter(card => card.id !== lastShownId);
+    
+    // Prefer new cards if any exist
+    const newCards = candidates.filter(card => card.isNew);
+    if (newCards.length > 0) {
+      // Return a random new card
+      return newCards[Math.floor(Math.random() * newCards.length)];
+    }
+    
+    // Otherwise, sort by interval (lowest first)
+    candidates.sort((a, b) => a.interval - b.interval);
+    return candidates.length > 0 ? candidates[0] : null;
+  }
+
   function updateCardCategory(wasCorrect: boolean) {
+    setFlashcards((prevCards) => {
+      const updatedCards = prevCards.map((card) => {
+        if (card.id !== currentCard?.id) return card;
+        return updateCardAfterReview(card, wasCorrect);
+      });
+      
+      const nextCard = getNextCard(updatedCards, currentCard?.id || null);
+      if (nextCard) {
+        setCurrentCardIndex(updatedCards.findIndex(card => card.id === nextCard.id));
+      }
+      
+      setIsFlipped(false);
+      return updatedCards;
+    });
+  }
+  
+
+  /*function updateCardCategory(wasCorrect: boolean) {
     // ... (your update logic remains unchanged)
     setFlashcards(cards =>
       cards.map((card) => {
@@ -144,7 +220,7 @@ export default function FlashcardPage() {
     });
 
     setIsFlipped(false);
-  }
+  }*/
 
   return (
     <div className="min-h-screen bg-purple-900 text-white p-4">
@@ -183,3 +259,4 @@ export default function FlashcardPage() {
           //learning={categoryCounts.Learning}
           //reviewing={categoryCounts.Reviewing}
           //total={totalCards}
+
