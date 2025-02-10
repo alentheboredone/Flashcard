@@ -11,8 +11,9 @@ export function speakText(text: string) {
     console.log('Available voices:', voices);
   
     // Try to find a German voice
-    const germanVoice = voices.find(voice => voice.lang.includes('de'));
-  
+    //const germanVoice = voices.find(voice => voice.lang.includes('de'));
+    const germanVoice = voices.find(voice => voice.lang === 'de-DE' && voice.name === 'Anna');
+
     if (germanVoice) {
       utterance.voice = germanVoice; // Use the German voice
     } else {
