@@ -10,6 +10,7 @@ import { ActionButtons } from '@/app/components/ActionButtons';
 import { getVocabulary } from '@/app/data/vocabulary';
 import { FlashCardWithState } from '@/app/lib/types';
 
+// A helper to generate a storage key for a given level
 function getSessionKeyForLevel(level: string) {
   return `flashcardSession_${level}`;
 }
@@ -33,14 +34,14 @@ function weightedRandomSelect(
 }
 
 export default function FlashcardPage() {
-  // Extract the base level from the URL (e.g. "B1.1")
+  // 1. Extract the base level from the URL (e.g. "B1.1")
   const params = useParams();
   const baseLevel = params.level; 
 
-  // Initialize our selected sublevel (e.g. "B1.1 (1-30)")
+  // 2. Initialize our selected sublevel (e.g. "B1.1 (1-30)")
   const defaultSubLevel = baseLevel + " (1-30)";
 
-  // Set up state.
+  // 3. Set up state.
   const [level, setLevel] = useState<LanguageLevel>(defaultSubLevel as LanguageLevel);
   const [limit, setLimit] = useState(30);
   const [offset, setOffset] = useState(0);
@@ -50,35 +51,26 @@ export default function FlashcardPage() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [lastShownId, setLastShownId] = useState<string | null>(null);
 
+  // 4. On mount or when level/limit/offset change, load saved session (if exists) or fetch fresh data.
   useEffect(() => {
-    // Check if we have saved flashcards in local storage
-    const sessionKey = getSessionKeyForLevel(level); 
-    const savedSession = localStorage.getItem('flashcardSession');
+    const sessionKey = getSessionKeyForLevel(level);
+    const savedSession = localStorage.getItem(sessionKey);
     if (savedSession) {
-      // Parse and set the state from local storage
+      // Restore the session from localStorage
       const { savedFlashcards, savedCurrentIndex, savedLevel } = JSON.parse(savedSession);
-
-      // 1. Set the level from local storage (if you want to)
+      console.log("Restoring session from localStorage for level:", savedLevel);
       setLevel(savedLevel || level);
-
-      // 2. Set the flashcards state
       setFlashcards(savedFlashcards);
-
-      // 3. Set the current card index
       setCurrentCardIndex(savedCurrentIndex);
-
-      // 4. We're done loading
       setLoading(false);
     } else {
-      // No saved data; fetch from the backend as before
-      setLoading(true);
+      // No saved data, so fetch from the backend.
       const fetchVocabulary = async () => {
         try {
           setLoading(true);
           console.log("Fetching vocabulary for level:", level);
           const fetchedVocabulary = await getVocabulary(level, limit, offset);
           console.log("Fetched data:", fetchedVocabulary);
-
           const flashcardsWithState = fetchedVocabulary.map((word) => ({
             ...word,
             reviewCount: 0,
@@ -95,8 +87,7 @@ export default function FlashcardPage() {
       };
     
       fetchVocabulary();
-    } 
-  
+    }
   }, [level, limit, offset]);
 
   if (loading) {
@@ -107,7 +98,7 @@ export default function FlashcardPage() {
     );
   }
 
-  // Create a filtered list of cards.
+  // 5. Determine the current card.
   const cardsInLevel = flashcards;
   const nonMasteredCards = cardsInLevel.filter(card => card.category !== 'mastered');
   const filteredCards = nonMasteredCards.length > 0 ? nonMasteredCards : cardsInLevel;
@@ -115,25 +106,22 @@ export default function FlashcardPage() {
     ? filteredCards[currentCardIndex % filteredCards.length]
     : null;
 
-  // Category counts for the progress tracker.
+  // 6. Calculate category counts for progress tracking.
   const categoryCounts = {
     New: cardsInLevel.filter(card => card.isNew).length,
     Learning: cardsInLevel.filter(card => !card.isNew && card.category === 'learning').length,
     Reviewing: cardsInLevel.filter(card => !card.isNew && card.category === 'reviewing').length,
     Mastered: cardsInLevel.filter(card => !card.isNew && card.category === 'mastered').length,
   };
-
   const totalCards = cardsInLevel.length;
 
-  // --- Spaced Repetition Logic ---
-
-  // Update a card based on whether the user got it correct.
+  // 7. Spaced Repetition Logic: update the card based on user performance.
   function updateCardAfterReview(card: FlashCardWithState, wasCorrect: boolean): FlashCardWithState {
     if (!wasCorrect) {
       // If the user did not know it, reset the interval to 1.
       return {
         ...card,
-        reviewCount: card.reviewCount, // optionally update if desired
+        reviewCount: card.reviewCount, // optional
         interval: 1,
         isNew: false,
         category: 'learning',
@@ -141,17 +129,17 @@ export default function FlashcardPage() {
       };
     } else {
       if (card.isNew) {
-        // If the card is new and answered correctly, mark it immediately as mastered.
+        // If the card is new and answered correctly, immediately master it.
         return {
           ...card,
           reviewCount: card.reviewCount, // optional
-          interval: 16, // a high interval so it won't reappear until all others are mastered
+          interval: 16, // high interval so it appears only after non-mastered cards are done
           isNew: false,
           category: 'mastered',
           lastShown: Date.now(),
         };
       } else {
-        // For already reviewed cards, increase the interval (here, simply doubling it).
+        // For reviewed cards, double the interval.
         const newInterval = card.interval * 2;
         let newCategory: 'learning' | 'reviewing' | 'mastered';
         if (newInterval < 3) {
@@ -173,14 +161,11 @@ export default function FlashcardPage() {
     }
   }
 
-  // Weighted random selection that returns a card.
-  // Here we combine both new and reviewed cards:
-  // - For new cards, a fixed weight (e.g., 1).
-  // - For reviewed cards, weight = 1/interval (so lower interval means more likely).
+  // 8. Use weighted random selection to pick the next card.
   function getNextCard(cards: FlashCardWithState[], lastShownId: string | null): FlashCardWithState | null {
-    // First, filter out the last shown card.
+    // Exclude the last shown card.
     const candidates = cards.filter(card => card.id !== lastShownId);
-    // If there are non-mastered cards, prefer them.
+    // Prefer non-mastered cards.
     const nonMasteredCandidates = candidates.filter(card => card.category !== 'mastered');
     const finalCandidates = nonMasteredCandidates.length > 0 ? nonMasteredCandidates : candidates;
   
@@ -192,7 +177,7 @@ export default function FlashcardPage() {
     return weightedRandomSelect(finalCandidates, weightFn);
   }
 
-  // --- Update the current card and state after a review ---
+  // 9. Update the current card and save the session after a review.
   function updateCardCategory(wasCorrect: boolean) {
     setFlashcards(prevCards => {
       const updatedCards = prevCards.map(card => {
@@ -208,20 +193,21 @@ export default function FlashcardPage() {
         setLastShownId(currentCard?.id || null);
       }
       setIsFlipped(false);
-
-      // --- SAVE to localStorage here ---
+  
+      // Save session to localStorage using the level-specific key.
       const sessionKey = getSessionKeyForLevel(level);
       const sessionData = {
-      savedFlashcards: updatedCards,
-      savedCurrentIndex: nextIndex,
-      savedLevel: level, // if you want to remember which sublevel user was in
+        savedFlashcards: updatedCards,
+        savedCurrentIndex: nextIndex,
+        savedLevel: level,
       };
       localStorage.setItem(sessionKey, JSON.stringify(sessionData));
-
+  
       return updatedCards;
     });
   }
 
+  // 10. Render the component.
   return (
     <div className="min-h-screen bg-purple-900 text-white p-4">
       <div className="max-w-md mx-auto">
@@ -230,14 +216,18 @@ export default function FlashcardPage() {
           baseLevel={String(baseLevel)}
           selectedLevel={level}
           onLevelChange={(selectedLevel) => {
+            // When the level changes, update state and load the saved session (if any) for that level.
             setLevel(selectedLevel as LanguageLevel);
-            
-            // Save the new level in the session too (just in case):
-            const sessionDataString = localStorage.getItem('flashcardSession');
-            if (sessionDataString) {
-            const sessionData = JSON.parse(sessionDataString);
-            sessionData.savedLevel = selectedLevel;
-            localStorage.setItem('flashcardSession', JSON.stringify(sessionData));
+            const sessionKey = getSessionKeyForLevel(selectedLevel as string);
+            const savedSession = localStorage.getItem(sessionKey);
+            if (savedSession) {
+              const { savedFlashcards, savedCurrentIndex, savedLevel } = JSON.parse(savedSession);
+              setFlashcards(savedFlashcards);
+              setCurrentCardIndex(savedCurrentIndex);
+              setLevel(savedLevel);
+            } else {
+              // Optionally, you might fetch fresh data if no session exists.
+              // For simplicity, we do nothing here.
             }
           }}
         />
