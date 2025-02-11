@@ -10,6 +10,10 @@ import { ActionButtons } from '@/app/components/ActionButtons';
 import { getVocabulary } from '@/app/data/vocabulary';
 import { FlashCardWithState } from '@/app/lib/types';
 
+function getSessionKeyForLevel(level: string) {
+  return `flashcardSession_${level}`;
+}
+
 // A helper for weighted random selection.
 function weightedRandomSelect(
   cards: FlashCardWithState[],
@@ -48,6 +52,7 @@ export default function FlashcardPage() {
 
   useEffect(() => {
     // Check if we have saved flashcards in local storage
+    const sessionKey = getSessionKeyForLevel(level); 
     const savedSession = localStorage.getItem('flashcardSession');
     if (savedSession) {
       // Parse and set the state from local storage
@@ -66,6 +71,7 @@ export default function FlashcardPage() {
       setLoading(false);
     } else {
       // No saved data; fetch from the backend as before
+      setLoading(true);
       const fetchVocabulary = async () => {
         try {
           setLoading(true);
@@ -198,18 +204,19 @@ export default function FlashcardPage() {
       let nextIndex = currentCardIndex;
       if (nextCard) {
         nextIndex = updatedCards.findIndex(card => card.id === nextCard.id);
-        setCurrentCardIndex(updatedCards.findIndex(card => card.id === nextCard.id));
+        setCurrentCardIndex(nextIndex);
         setLastShownId(currentCard?.id || null);
       }
       setIsFlipped(false);
 
       // --- SAVE to localStorage here ---
+      const sessionKey = getSessionKeyForLevel(level);
       const sessionData = {
       savedFlashcards: updatedCards,
       savedCurrentIndex: nextIndex,
       savedLevel: level, // if you want to remember which sublevel user was in
       };
-      localStorage.setItem('flashcardSession', JSON.stringify(sessionData));
+      localStorage.setItem(sessionKey, JSON.stringify(sessionData));
 
       return updatedCards;
     });
@@ -259,9 +266,3 @@ export default function FlashcardPage() {
     </div>
   );
 }
-//ProgressBar
-          //mastered={categoryCounts.Mastered}
-          //learning={categoryCounts.Learning}
-          //reviewing={categoryCounts.Reviewing}
-          //total={totalCards}
-
