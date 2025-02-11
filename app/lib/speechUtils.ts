@@ -1,12 +1,28 @@
-export const speakText = (text: string) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'de-DE'; // German language
-      utterance.rate = 1; // Speed of speech (1 is normal)
-      utterance.pitch = 1; // Pitch (1 is normal)
-      speechSynthesis.speak(utterance);
-    } else {
-      alert("Sorry, your browser doesn't support text-to-speech!");
+export function speakText(text: string) {
+    if (!('speechSynthesis' in window)) {
+      alert('Speech synthesis is not supported in this browser.');
+      return;
     }
-  };
+  
+    const utterance = new SpeechSynthesisUtterance(text);
+  
+    // Log available voices to the console
+    const voices = window.speechSynthesis.getVoices();
+    console.log('Available voices:', voices);
+  
+    // Try to find a German voice
+    //const germanVoice = voices.find(voice => voice.lang.includes('de'));
+    const germanVoice = voices.find(voice => voice.lang === 'de-DE' && voice.name === 'Anna');
+
+    if (germanVoice) {
+      utterance.voice = germanVoice; // Use the German voice
+    } else {
+      utterance.lang = 'de-DE'; // Fallback to German language if voice not found
+    }
+  
+    utterance.rate = 0.9;  // Adjust speed if necessary
+    utterance.pitch = 1.0; // Adjust pitch if necessary
+  
+    window.speechSynthesis.speak(utterance);
+  }
   

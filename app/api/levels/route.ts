@@ -10,7 +10,7 @@ import { Pool } from 'pg';
 //  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 //});
 // Create a connection pool for PostgreSQL
-const pool = new Pool({
+/*const pool = new Pool({
     user: 'postgres', // Replace with your PostgreSQL username
     host: 'localhost',     // Replace with your PostgreSQL host
     database: 'German words', // Replace with your PostgreSQL database name
@@ -18,8 +18,19 @@ const pool = new Pool({
     port: 5432,            // Replace with your PostgreSQL port if different
     });
     console.log('Database User:',  process.env.DATABASE_USER);
-    console.log('Database Password:', process.env.DATABASE_PASSWORD); // Debug only, remove after testing
+    console.log('Database Password:', process.env.DATABASE_PASSWORD); // Debug only, remove after testing*/
 
+    const pool = new Pool({
+      host: process.env.DATABASE_HOST, // From environment variable
+      port: parseInt(process.env.DATABASE_PORT || '5432'), // Default port is 5432
+      user: process.env.DATABASE_USER, // From environment variable
+      password: process.env.DATABASE_PASSWORD, // From environment variable
+      database: process.env.DATABASE_NAME || 'postgres', // Default to 'postgres' if not set
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false, // Needed for Supabase SSL connections
+      },
+    });
 
 export async function GET(request: Request) {
   // Optionally, allow filtering by baseLevel (e.g. "B1.1") via a query parameter.
