@@ -18,11 +18,8 @@ export const FlashCardSchema = z.object({
 
 export type FlashCard = z.infer<typeof FlashCardSchema>;
 
-
-
 // Fetch data from PostgreSQL
 export const getVocabulary = async (level: string, limit: number = 30, offset: number = 0): Promise<FlashCard[]> => {
-  console.log("getVocabulary -> Searching for level:", level);
   const queryText = `
     SELECT 
       id::text, 
